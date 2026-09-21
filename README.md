@@ -1,52 +1,59 @@
 # mediamtx-dynamic
 
-Thin Go API + [MediaMTX](https://mediamtx.org/docs/kickoff/install#standalone-binary) so any multicast URL like:
+MediaMTX for video (LL-HLS / WHEP / RTSP) + thin Go API for start/stop/meta/AI overlay.
 
-```text
-udp://224.2.0.1:5493/restream/bbcdcadb-e98e-4650-8eb2-10261f7c9ad0_720
-```
+Swagger UI: `http://127.0.0.1:8090/api/doc`
 
-is joined dynamically (host:port only; `/restream/...` is just an id) and served as LL-HLS / WebRTC.
-
-**Not a drop-in for `mobileservergo`.** No AI overlay canvas. MediaMTX alone cannot map unlimited UDP sources without its [Control API](https://mediamtx.org/docs/features/control-api) — this repo is that glue.
+Not a full rewrite of `mobileservergo`: video pipeline is MediaMTX; AI metadata is sniffed from the same multicast and served as `GET /stream/overlay/{id}`.
 
 ## Requirements
 
-1. MediaMTX standalone binary ([install](https://mediamtx.org/docs/kickoff/install#standalone-binary))
-2. Go 1.22+
+- Go **1.22+** (prefer latest from https://go.dev/dl — Ubuntu `apt` Go is often too old for this module)
+- MediaMTX [standalone binary](https://mediamtx.org/docs/kickoff/install#standalone-binary)
 
-## Run
+## Ubuntu quick start
 
-```powershell
-# 1) download MediaMTX once
-.\scripts\download-mediamtx.ps1
+```bash
+git clone https://github.com/abnos5525/mediamtx-dynamic.git
+cd mediamtx-dynamic
 
-# 2) start MediaMTX (keep this window open)
-.\mediamtx.exe mediamtx.yml
+VER=v1.21.1
+curl -L -o mtx.tar.gz \
+  "https://github.com/bluenviron/mediamtx/releases/download/${VER}/mediamtx_${VER}_linux_amd64.tar.gz"
+tar -xzf mtx.tar.gz
 
-# 3) start API
+# terminal 1 — if :8000 is busy, mediamtx.yml already uses rtp 18000/18001
+./mediamtx mediamtx.yml
+
+# terminal 2
 go run ./cmd/server
 ```
 
-## API
+### Start / play / overlay / stop
 
-```powershell
-# start (HLS)
-curl -X POST http://127.0.0.1:8090/stream/start -H "Content-Type: application/json" -d "{\"url\":\"udp://224.2.0.1:5493/restream/bbcdcadb-e98e-4650-8eb2-10261f7c9ad0_720\",\"output_type\":6}"
+```bash
+curl -s -X POST http://127.0.0.1:8090/stream/start \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"udp://224.2.0.1:5493/restream/bbcdcadb-e98e-4650-8eb2-10261f7c9ad0_720","output_type":6}'
 
-# start (WebRTC WHEP)
-curl -X POST http://127.0.0.1:8090/stream/start -H "Content-Type: application/json" -d "{\"url\":\"udp://224.2.0.1:5493/restream/bbcdcadb-e98e-4650-8eb2-10261f7c9ad0_720\",\"output_type\":7}"
+# HLS from response.url — overlay (same path id):
+curl -s 'http://127.0.0.1:8090/stream/overlay/<id>?lag_ms=600'
 
-# stop
-curl -X POST http://127.0.0.1:8090/stream/stop -H "Content-Type: application/json" -d "{\"url\":\"udp://224.2.0.1:5493/restream/bbcdcadb-e98e-4650-8eb2-10261f7c9ad0_720\"}"
+curl -s -X POST http://127.0.0.1:8090/stream/stop \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"udp://224.2.0.1:5493/restream/bbcdcadb-e98e-4650-8eb2-10261f7c9ad0_720"}'
 ```
 
-Response includes `url` (HLS or WHEP), plus `hls` / `webrtc` always.
+`output_type` `7` returns MediaMTX WHEP URL (`…/whep`), not a custom pion offer.
 
-Env overrides: `LISTEN`, `MTX_API`, `HLS_BASE`, `WEBRTC_BASE`.
+Optional body field `format`: `rtp` (default) or `mpegts`.
 
-## Notes
+Env: `LISTEN`, `MTX_API`, `HLS_BASE`, `WEBRTC_BASE`, `HOST_IP` (NIC for AI sniff), `AI_OFFSET_MS`.
 
-- Ingest assumes **RTP H264 PT 96** (`udp+rtp://`), same family as the VMS multicast cameras. If a camera is MPEG-TS over UDP instead, change `source` to `udp+mpegts://host:port` in `cmd/server/main.go`.
-- Windows multicast needs a working IGMP path on the NIC that sees the group.
-- For remote browsers, set `webrtcAdditionalHosts` in `mediamtx.yml` to this machine's LAN IP.
+## Windows
+
+```powershell
+.\scripts\download-mediamtx.ps1
+.\mediamtx.exe mediamtx.yml
+go run ./cmd/server
+```
