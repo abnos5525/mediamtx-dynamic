@@ -1,0 +1,28 @@
+# MediaMTX — paths are added at runtime by cmd/server via Control API.
+# Docs: https://mediamtx.org/docs/kickoff/install#standalone-binary
+
+logLevel: info
+
+api: yes
+apiAddress: 127.0.0.1:9997
+
+rtsp: yes
+rtspAddress: :8554
+
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+hlsAllowOrigin: "*"
+
+webrtc: yes
+webrtcAddress: :8889
+webrtcAllowOrigin: "*"
+# Set to your LAN IP if browsers are on another machine:
+# webrtcAdditionalHosts: [192.168.1.10]
+
+paths: {}
