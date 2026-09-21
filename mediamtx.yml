@@ -25,4 +25,8 @@ webrtcAllowOrigin: "*"
 # Set to your LAN IP if browsers are on another machine:
 # webrtcAdditionalHosts: [192.168.1.10]
 
+# Default :8000/:8001 often clash with other services on VMS boxes.
+rtpAddress: :18000
+rtcpAddress: :18001
+
 paths: {}
