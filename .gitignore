@@ -3,3 +3,6 @@ server.exe
 *.zip
 *.log
 /tmp/
+
+.cursor/
+.agents/

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "how": {
+      "source": "metaphorics/how",
+      "sourceType": "github",
+      "skillPath": "skills/how/SKILL.md",
+      "computedHash": "1702a29f7108e662ad34ec4b58fa02f5cebac259c30520e988307ded56a0876f"
+    }
+  }
+}
